@@ -1,4 +1,5 @@
-from numbers import number
+import numpy as np
+from numbers import Number
 
 zinfo = {'zmin': 0.,
          'zmax': 2.,
@@ -32,26 +33,31 @@ class LSSTErrorModel():
                                'z': 0.039,
                                'y': 0.039}
             
+        self.undetected_flag = undetected_flag
+            
         # check that the keys match
         err_str = 'limiting_mags and err_params have different keys'
         assert self.limiting_mags.keys() == self.err_params.keys(), err_str
         
-        # check that all the values are numbers
+        # check that all values are numbers
         all_numbers = all(isinstance(val, Number) for val in self.limiting_mags.values())
         err_str = 'All limiting magnitudes must be numbers'
         assert all_numbers, err_str
         all_numbers = all(isinstance(val, Number) for val in self.err_params.values())
         err_str = 'All error parameters must be numbers'
         assert all_numbers, err_str
+        err_str = 'The undetected flag for mags beyond the 5-sigma limit must be a number'
+        assert isinstance(self.undetected_flag, Number), err_str
+        
         
     def __call__(self, data, seed=None):
         # Gaussian errors using Equation 5
         # from https://arxiv.org/pdf/0805.2366.pdf
         # then flag all magnitudes beyond 5-sig limit
         
-        rng = np.random.default_rng(err_seed)
+        rng = np.random.default_rng(seed)
 
-        for band self.limiting_mags.keys():
+        for band in self.limiting_mags.keys():
             
             # calculate err with Eq 5
             m5 = self.limiting_mags[band]
@@ -64,5 +70,6 @@ class LSSTErrorModel():
             data[band] = rng.normal(data[band], data[f'{band}_err'])
             
             # flag mags beyond limiting mag
-            data.loc[data.eval(f'{band} > {m5}'), band] = 99
-                
+            data.loc[data.eval(f'{band} > {m5}'), (band,f'{band}_err')] = self.undetected_flag
+            
+        return data
