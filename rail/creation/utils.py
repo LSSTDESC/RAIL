@@ -46,8 +46,9 @@ class LSSTErrorModel():
         all_numbers = all(isinstance(val, Number) for val in self.err_params.values())
         err_str = 'All error parameters must be numbers'
         assert all_numbers, err_str
+        all_numbers = isinstance(self.undetected_flag, Number)
         err_str = 'The undetected flag for mags beyond the 5-sigma limit must be a number'
-        assert isinstance(self.undetected_flag, Number), err_str
+        assert all_numbers, err_str
         
         
     def __call__(self, data, seed=None):
@@ -65,11 +66,13 @@ class LSSTErrorModel():
             x = 10**(0.4*(data[band] - m5))
             err = np.sqrt((0.04 - gamma)*x + gamma*x**2)
             
-            # Add errs to data frame
+            # Add errs to galaxies within limiting mag
             data[f'{band}_err'] = err
-            data[band] = rng.normal(data[band], data[f'{band}_err'])
+            rand_err = rng.normal(0, err)
+            rand_err[data[band] > m5] = 0
+            data[band] += rand_err
             
             # flag mags beyond limiting mag
-            data.loc[data.eval(f'{band} > {m5}'), (band,f'{band}_err')] = self.undetected_flag
+            data.loc[data.eval(f'{band} > {m5}'), (band, f'{band}_err')] = self.undetected_flag
             
         return data

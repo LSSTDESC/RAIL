@@ -3,7 +3,6 @@ import pandas as pd
 
 import rail.creation.utils as rcu
 
-
 class Creator():
     """
     An object that supplies mock data for redshift estimation experiments.
@@ -54,6 +53,7 @@ class Creator():
             sets the random seed for drawing samples
         err_seed: int, optional
             sets the seed for the Gaussian errors
+            If err_seed is not set, but seed is set, then err_seed = seed
         zinfo: dictionary, optional
             must contain `zmin`, `zmax`, `dz` floats
 
@@ -70,6 +70,8 @@ class Creator():
         """
 
         rng = np.random.default_rng(seed)
+        if err_seed is None and seed is not None:
+            err_seed = seed
 
         # get samples
         samples = self.generator.sample(n_samples, seed=seed)
